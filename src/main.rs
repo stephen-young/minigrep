@@ -1,5 +1,7 @@
 use std::env::args;
+use std::error::Error;
 use std::fs;
+use std::process;
 
 fn main() {
     let args: Vec<String> = args().collect();
@@ -7,19 +9,50 @@ fn main() {
         println!("{}", a)
     }
 
-    // TODO: Improve input parsing
-    let query = &args[1];
-    let file_name = &args[2];
+    let config = Config::build(&args).unwrap_or_else(|err| {
+        println!("Problem parsing arguments: {err}");
+        process::exit(1);
+    });
 
-    println!("Looking for {query} in {file_name}");
+    println!("Looking for {} in {}", config.query, config.file_name);
 
-    // TODO: Improve error handling
-    let contents = fs::read_to_string(file_name).expect("Should be able to open the file");
+    if let Err(e) = run(config) {
+        println!("Application error: {e}");
+        process::exit(1);
+    };
+}
+
+fn run(config: Config) -> Result<(), Box<dyn Error>> {
+    let contents = fs::read_to_string(config.file_name)?;
     let lines: Vec<&str> = contents.split("\n").collect();
 
     for l in lines {
-        if l.contains(query) {
+        if l.contains(&config.query) {
             println!("{}", l);
         }
+    }
+
+    Ok(())
+}
+
+struct Config {
+    query: String,
+    file_name: String,
+}
+
+impl Config {
+    fn build(args: &[String]) -> Result<Config, &'static str> {
+        if args.len() < 3 {
+            return Err("Not enough arguments");
+        }
+
+        let query = args[1].clone();
+        let file_name = args[2].clone();
+
+        if !fs::exists(&file_name).unwrap() {
+            return Err("File does not exist");
+        }
+
+        Ok(Config { query, file_name })
     }
 }
