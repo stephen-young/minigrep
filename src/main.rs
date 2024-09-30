@@ -1,13 +1,10 @@
 use std::env::args;
-use std::error::Error;
-use std::fs;
 use std::process;
+
+use minigrep::Config;
 
 fn main() {
     let args: Vec<String> = args().collect();
-    for a in &args {
-        println!("{}", a)
-    }
 
     let config = Config::build(&args).unwrap_or_else(|err| {
         println!("Problem parsing arguments: {err}");
@@ -16,43 +13,8 @@ fn main() {
 
     println!("Looking for {} in {}", config.query, config.file_name);
 
-    if let Err(e) = run(config) {
+    if let Err(e) = minigrep::run(config) {
         println!("Application error: {e}");
         process::exit(1);
     };
-}
-
-fn run(config: Config) -> Result<(), Box<dyn Error>> {
-    let contents = fs::read_to_string(config.file_name)?;
-    let lines: Vec<&str> = contents.split("\n").collect();
-
-    for l in lines {
-        if l.contains(&config.query) {
-            println!("{}", l);
-        }
-    }
-
-    Ok(())
-}
-
-struct Config {
-    query: String,
-    file_name: String,
-}
-
-impl Config {
-    fn build(args: &[String]) -> Result<Config, &'static str> {
-        if args.len() < 3 {
-            return Err("Not enough arguments");
-        }
-
-        let query = args[1].clone();
-        let file_name = args[2].clone();
-
-        if !fs::exists(&file_name).unwrap() {
-            return Err("File does not exist");
-        }
-
-        Ok(Config { query, file_name })
-    }
 }
